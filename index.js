@@ -27,7 +27,7 @@ async function run() {
 
     const db = client.db('service_review'); 
     const servicesCollection = db.collection('services'); 
-
+    const reviewsCollection = db.collection('reviews');
     //Services routes
     //Get all services (with optional limit)
     app.get('/api/services', async (req, res) => {
@@ -52,6 +52,21 @@ async function run() {
         res.status(500).json({ message: error.message });
       }
     });
+
+    // Create a new service
+    app.post('/api/services', async (req, res) => {
+        try {
+          const newService = await servicesCollection.insertOne(req.body);
+          res.status(201).json(newService);
+        } catch (error) {
+          res.status(400).json({ message: error.message });
+        }
+      });
+
+
+      
+
+  
 
    
 
