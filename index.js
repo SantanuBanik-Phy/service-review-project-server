@@ -21,18 +21,24 @@ app.use(cookieParser())
 
 // verifyToken
 const verifyToken = (req, res, next) => {
-  const token = req.cookies?.token
-  if (!token) return res.status(401).send({ message: 'unauthorized access' })
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' });
+  }
   jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
     if (err) {
-      return res.status(401).send({ message: 'unauthorized access' })
+      return res.status(401).send({ message: 'unauthorized access' });
     }
-    req.user = decoded
-  })
 
-  next()
-}
+    // Check if the decoded email matches the email in the request body
+    if (req.body.email && decoded.email !== req.body.email) {
+      return res.status(403).send({ message: 'forbidden access' });
+    }
 
+    req.user = decoded;
+    next();
+  });
+};
 
 //MongoDB connection URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xd8qc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -55,6 +61,7 @@ async function run() {
     //Get all services (with optional limit)
     app.get('/api/services', async (req, res) => {
       try {
+       
         const limit = parseInt(req.query.limit) || 0;
         const services = await servicesCollection.find().limit(limit).toArray();
         res.json(services);
@@ -106,7 +113,7 @@ async function run() {
     });
 
     // Create a new service
-    app.post('/api/services', async (req, res) => {
+    app.post('/api/services',  async (req, res) => {
         try {
           const newService = await servicesCollection.insertOne(req.body);
           res.status(201).json(newService);
@@ -131,6 +138,52 @@ app.get('/api/allServices', async (req, res) => {
   const result = await servicesCollection.find(query).toArray()
   res.send(result)
 })
+
+//update service
+app.put('/api/services/:id', async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
+
+  try {
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid service ID' });
+    }
+
+    // Validate required fields in updateData
+    if (!updateData.title || !updateData.companyName || !updateData.price || !updateData.category || !updateData.website) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const result = await servicesCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ message: 'Service updated successfully' });
+    } else {
+      res.status(404).json({ message: 'Service not found' });
+    }
+  } catch (error) {
+    console.error('Error updating service:', error);
+    res.status(500).json({ message: 'Failed to update service' });
+  }
+});
+
+
+// Delete a service
+app.delete('/api/services/:id',  async (req, res) => {
+try {
+  await servicesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+  res.json({ message: 'Service deleted' });
+} catch (error) {
+  res.status(500).json({ message: error.message });
+}
+});
+
+
+
+
 
 
 
@@ -157,7 +210,7 @@ app.get('/api/reviews/service/:serviceId', async (req, res) => {
 });
 
 // Create a new review
-app.post('/api/reviews', async (req, res) => {
+app.post('/api/reviews', verifyToken, async (req, res) => {
   try {
     const newReview = await reviewsCollection.insertOne(req.body);
     res.status(201).json(newReview);
@@ -167,7 +220,7 @@ app.post('/api/reviews', async (req, res) => {
 });
 
 // Update a review
-app.patch('/api/reviews/:id', async (req, res) => {
+app.patch('/api/reviews/:id', verifyToken, async (req, res) => {
     try {
       const updatedReview = await reviewsCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
@@ -179,26 +232,7 @@ app.patch('/api/reviews/:id', async (req, res) => {
     }
     });
     
-    // Delete a review
-    app.delete('/api/reviews/:id', async (req, res) => {
-    try {
-
-        const result = await reviewsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        
-        // Check if a document was deleted
-        if (result.deletedCount === 1) {
-            return res.json({ message: 'Review deleted', deletedCount: result.deletedCount });
-        } else {
-            return res.status(404).json({ message: 'Review not found' });
-        }
-    } catch (error) {
-       
-        res.status(500).json({ message: error.message });
-    }
-    });
-      
-
-
+   
   } finally {
    
     // await client.close();
