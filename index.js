@@ -63,10 +63,23 @@ async function run() {
         }
       });
 
-
-      
-
+     // get all services for search and filter
+app.get('/api/allServices', async (req, res) => {
+  const filter = req.query.filter
+  const search = req.query.search
+ 
   
+  let query = {
+    title: {
+      $regex: search,
+      $options: 'i',
+    },
+  }
+  if (filter) query.category = filter
+  const result = await servicesCollection.find(query).toArray()
+  res.send(result)
+})
+
 
    
 
