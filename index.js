@@ -166,6 +166,86 @@ app.post('/api/reviews', async (req, res) => {
   }
 });
 
+//update service
+app.put('/api/services/:id', async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
+
+  try {
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid service ID' });
+    }
+
+    // Validate required fields in updateData
+    if (!updateData.title || !updateData.companyName || !updateData.price || !updateData.category || !updateData.website) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const result = await servicesCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ message: 'Service updated successfully' });
+    } else {
+      res.status(404).json({ message: 'Service not found' });
+    }
+  } catch (error) {
+    console.error('Error updating service:', error);
+    res.status(500).json({ message: 'Failed to update service' });
+  }
+});
+
+
+// Delete a service
+app.delete('/api/services/:id', async (req, res) => {
+try {
+  await servicesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+  res.json({ message: 'Service deleted' });
+} catch (error) {
+  res.status(500).json({ message: error.message });
+}
+});
+
+
+
+
+
+// Update a review
+app.patch('/api/reviews/:id', async (req, res) => {
+  try {
+    const updatedReview = await reviewsCollection.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: req.body }
+    );
+    res.json(updatedReview);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+  });
+  
+  // Delete a review
+  app.delete('/api/reviews/:id', async (req, res) => {
+  try {
+      // Attempt to delete the review from the database
+      const result = await reviewsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+      
+      // Check if a document was deleted
+      if (result.deletedCount === 1) {
+          return res.json({ message: 'Review deleted', deletedCount: result.deletedCount });
+      } else {
+          return res.status(404).json({ message: 'Review not found' });
+      }
+  } catch (error) {
+      // Handle any errors
+      res.status(500).json({ message: error.message });
+  }
+  });
+    
+
+
+
   } finally {
    
     // await client.close();
