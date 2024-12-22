@@ -231,6 +231,50 @@ app.patch('/api/reviews/:id', verifyToken, async (req, res) => {
       res.status(400).json({ message: error.message });
     }
     });
+
+     // Delete a review
+     app.delete('/api/reviews/:id', verifyToken, async (req, res) => {
+      try {
+  
+          const result = await reviewsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+          
+          // Check if a document was deleted
+          if (result.deletedCount === 1) {
+              return res.json({ message: 'Review deleted', deletedCount: result.deletedCount });
+          } else {
+              return res.status(404).json({ message: 'Review not found' });
+          }
+      } catch (error) {
+         
+          res.status(500).json({ message: error.message });
+      }
+      });
+      
+      app.get('/api/platform-stats', async (req, res) => {
+        try {
+          // Fetch all documents from the services collection
+          const services = await servicesCollection.find().toArray();
+      
+          // Extract unique user emails
+         
+          const uniqueEmails = new Set(services.map(service => service.userEmail));
+          const usersCount = uniqueEmails.size;
+      
+          const reviewsCount = await reviewsCollection.countDocuments();
+          const servicesCount = await servicesCollection.countDocuments();
+          
+      
+          res.json({
+            users: Math.max(usersCount, 0), 
+            reviews: Math.max(reviewsCount, 0), 
+            servicesCount: Math.max(servicesCount, 0)
+          });
+        } catch (error) {
+          console.error("Error fetching platform stats:", error);
+          res.status(500).json({ message: 'Error fetching platform stats' });
+        }
+      });
+  
     
    
   } finally {
