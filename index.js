@@ -4,7 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 const corsOptions = {
-  origin: ['http://localhost:5173'],
+  origin: ['http://localhost:5173','https://b10-a11.web.app','https://b10-a11.firebaseapp.com'],
   credentials: true,
   optionalSuccessStatus: 200,
 }
@@ -59,7 +59,7 @@ async function run() {
      const categoriesCollection = db.collection('categories');
     //Services routes
   // Get all services for the authenticated user
-app.get('/api/services', verifyToken, async (req, res) => {
+app.get('/api/services',verifyToken,  async (req, res) => {
   try {
    
     const userEmail = req.user.email;
@@ -67,6 +67,16 @@ app.get('/api/services', verifyToken, async (req, res) => {
    
     const services = await servicesCollection.find({ userEmail: userEmail }).toArray();
 
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+app.get('/services', async (req, res) => {
+  try {
+   
+    const limit = parseInt(req.query.limit) || 0;
+    const services = await servicesCollection.find().limit(limit).toArray();
     res.json(services);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -261,28 +271,32 @@ app.patch('/api/reviews/:id', async (req, res) => {
       
       app.get('/api/platform-stats', async (req, res) => {
         try {
-          // Fetch all documents from the services collection
+
           const services = await servicesCollection.find().toArray();
       
-          // Extract unique user emails
-         
-          const uniqueEmails = new Set(services.map(service => service.userEmail));
-          const usersCount = uniqueEmails.size;
+        
+          const uniqueEmails = new Set(
+            services
+              .filter((service) => service.userEmail) 
+              .map((service) => service.userEmail)   
+          );
       
+          const usersCount = uniqueEmails.size; // Count unique emails
           const reviewsCount = await reviewsCollection.countDocuments();
           const servicesCount = await servicesCollection.countDocuments();
-          
       
           res.json({
-            users: Math.max(usersCount, 0), 
-            reviews: Math.max(reviewsCount, 0), 
-            servicesCount: Math.max(servicesCount, 0)
+            users: usersCount || 0, // Use 0 as fallback
+            reviews: reviewsCount || 0,
+            servicesCount: servicesCount || 0,
           });
         } catch (error) {
           console.error("Error fetching platform stats:", error);
           res.status(500).json({ message: 'Error fetching platform stats' });
         }
       });
+      
+
 
       app.get('/api/categories', async (req, res) => {
         try {
