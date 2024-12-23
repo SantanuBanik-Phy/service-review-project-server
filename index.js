@@ -57,6 +57,7 @@ async function run() {
     const db = client.db('service_review'); 
     const servicesCollection = db.collection('services'); 
     const reviewsCollection = db.collection('reviews');
+     const categoriesCollection = db.collection('categories');
     //Services routes
     //Get all services (with optional limit)
     app.get('/api/services', async (req, res) => {
@@ -274,6 +275,18 @@ app.patch('/api/reviews/:id', verifyToken, async (req, res) => {
           res.status(500).json({ message: 'Error fetching platform stats' });
         }
       });
+
+      app.get('/api/categories', async (req, res) => {
+        try {
+          
+            const categories = await categoriesCollection.find().toArray(); 
+    
+            res.json(categories);
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+            res.status(500).json({ message: 'Error fetching categories' });
+        }
+    });
   
     
    
