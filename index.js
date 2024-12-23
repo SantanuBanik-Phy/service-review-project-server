@@ -29,11 +29,10 @@ const verifyToken = (req, res, next) => {
     if (err) {
       return res.status(401).send({ message: 'unauthorized access' });
     }
-
-    // Check if the decoded email matches the email in the request body
-    if (req.body.email && decoded.email !== req.body.email) {
+    if (req.query.email && decoded.email !== req.query.email) {
       return res.status(403).send({ message: 'forbidden access' });
     }
+
 
     req.user = decoded;
     next();
@@ -59,17 +58,20 @@ async function run() {
     const reviewsCollection = db.collection('reviews');
      const categoriesCollection = db.collection('categories');
     //Services routes
-    //Get all services (with optional limit)
-    app.get('/api/services', async (req, res) => {
-      try {
-       
-        const limit = parseInt(req.query.limit) || 0;
-        const services = await servicesCollection.find().limit(limit).toArray();
-        res.json(services);
-      } catch (error) {
-        res.status(500).json({ message: error.message });
-      }
-    });
+  // Get all services for the authenticated user
+app.get('/api/services', verifyToken, async (req, res) => {
+  try {
+   
+    const userEmail = req.user.email;
+
+   
+    const services = await servicesCollection.find({ userEmail: userEmail }).toArray();
+
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
      // generate jwt
      app.post('/jwt', async (req, res) => {
@@ -116,6 +118,7 @@ async function run() {
     // Create a new service
     app.post('/api/services',  async (req, res) => {
         try {
+          
           const newService = await servicesCollection.insertOne(req.body);
           res.status(201).json(newService);
         } catch (error) {
@@ -191,12 +194,17 @@ try {
 
 // Reviews routes
 // Get all reviews
-app.get('/api/reviews', async (req, res) => {
+app.get('/api/reviews', verifyToken, async (req, res) => {
   try {
-    const reviews = await reviewsCollection.find().toArray();
-    res.json(reviews);
+     
+      const userEmail = req.user.email;
+
+    
+      const reviews = await reviewsCollection.find({ reviewerEmail: userEmail }).toArray();
+
+      res.json(reviews);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      res.status(500).json({ message: error.message });
   }
 });
 
