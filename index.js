@@ -211,7 +211,7 @@ app.get('/api/reviews/service/:serviceId', async (req, res) => {
 });
 
 // Create a new review
-app.post('/api/reviews', verifyToken, async (req, res) => {
+app.post('/api/reviews',  async (req, res) => {
   try {
     const newReview = await reviewsCollection.insertOne(req.body);
     res.status(201).json(newReview);
@@ -221,7 +221,7 @@ app.post('/api/reviews', verifyToken, async (req, res) => {
 });
 
 // Update a review
-app.patch('/api/reviews/:id', verifyToken, async (req, res) => {
+app.patch('/api/reviews/:id', async (req, res) => {
     try {
       const updatedReview = await reviewsCollection.updateOne(
         { _id: new ObjectId(req.params.id) },
@@ -234,7 +234,7 @@ app.patch('/api/reviews/:id', verifyToken, async (req, res) => {
     });
 
      // Delete a review
-     app.delete('/api/reviews/:id', verifyToken, async (req, res) => {
+     app.delete('/api/reviews/:id',  async (req, res) => {
       try {
   
           const result = await reviewsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
