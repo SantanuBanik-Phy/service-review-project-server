@@ -3,16 +3,21 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
-const corsOptions = {
-  origin: ['http://localhost:5173','https://b10-a11.web.app','https://b10-a11.firebaseapp.com'],
-  credentials: true,
-  optionalSuccessStatus: 200,
-}
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const corsOptions = {
+  origin: [
+    'https://burly-voyage.surge.sh',
+    'http://localhost:5173',
+    'https://b10-a11.web.app',
+    'https://b10-a11.firebaseapp.com',
+    
+  ],
+  credentials: true, 
+};
 
 // Middleware
 app.use(cors(corsOptions));
@@ -22,22 +27,20 @@ app.use(cookieParser())
 // verifyToken
 const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
+  console.log("capture by midleware",token);
   if (!token) {
-    return res.status(401).send({ message: 'unauthorized access' });
+      return res.status(401).send({ message: 'Unauthorized access' });
   }
   jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: 'unauthorized access' });
-    }
-    if (req.query.email && decoded.email !== req.query.email) {
-      return res.status(403).send({ message: 'forbidden access' });
-    }
-
-
-    req.user = decoded;
-    next();
+      if (err) {
+          return res.status(401).send({ message: 'Unauthorized access' });
+      }
+      req.user = decoded;
+      next();
   });
+ 
 };
+
 
 //MongoDB connection URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xd8qc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -58,20 +61,38 @@ async function run() {
     const reviewsCollection = db.collection('reviews');
      const categoriesCollection = db.collection('categories');
     //Services routes
+    
   // Get all services for the authenticated user
-app.get('/api/services',verifyToken,  async (req, res) => {
-  try {
-   
-    const userEmail = req.user.email;
+//   app.get('/api/services', async (req, res) => {
+//     // const email = req.query.email
+//     // const decodedEmail = req.user?.email
+//     // // console.log('email from token-->', decodedEmail)
+//     // // console.log('email from query-->', email)
+//     // if (decodedEmail !== email)
+//     //   return res.status(401).send({ message: 'unauthorized access' })
+    
+//     const userEmail = req.query.email;
+//     const services = await servicesCollection.find({userEmail: userEmail}).toArray();
+//     res.json(services);
+//  });
 
-   
-    const services = await servicesCollection.find({ userEmail: userEmail }).toArray();
 
-    res.json(services);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+
+ app.get('/api/services/:email',verifyToken,async (req, res) => {
+  const email = req.params.email
+  const decodedEmail = req.user?.email
+  // console.log('email from token-->', decodedEmail)
+  // console.log('email from params-->', email)
+  if (decodedEmail !== email)
+    return res.status(401).send({ message: 'unauthorized access' })
+  const query = { 'userEmail': email }
+  const result = await servicesCollection.find(query).toArray()
+  res.send(result)
+  })
+
+
+
+
 app.get('/services', async (req, res) => {
   try {
    
@@ -82,34 +103,31 @@ app.get('/services', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  
+};
 
-     // generate jwt
-     app.post('/jwt', async (req, res) => {
-      const email = req.body
-      // create token
-      const token = jwt.sign(email, process.env.SECRET_KEY, {
-        expiresIn: '365d',
-      })
-      console.log(token)
-      res
-        .cookie('token', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        })
-        .send({ success: true })
-    })
+    //creating Token
+app.post("/jwt", async (req, res) => {
+  const user = req.body;
+  console.log("user for token", user);
+  const token = jwt.sign(user, process.env.SECRET_KEY, {
+    expiresIn: '365d',
+  })
+  res.cookie("token", token, cookieOptions).send({ success: true });
+});
 
-    // logout || clear cookie from browser
-    app.get('/logout', async (req, res) => {
-      res
-        .clearCookie('token', {
-          maxAge: 0,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        })
-        .send({ success: true })
-    })
+//clearing Token
+app.post("/logout", async (req, res) => {
+  const user = req.body;
+  console.log("logging out", user);
+  res
+    .clearCookie("token", { ...cookieOptions, maxAge: 0 })
+    .send({ success: true });
+});
 
 
     // Get a single service by ID
@@ -204,19 +222,40 @@ try {
 
 // Reviews routes
 // Get all reviews
-app.get('/api/reviews', verifyToken, async (req, res) => {
-  try {
+// app.get('/api/reviews', async (req, res) => {
+//   try {
+//     // const email = req.query.email
+//     // const decodedEmail = req.user?.email
+//     // // console.log('email from token-->', decodedEmail)
+//     // // console.log('email from query-->', email)
+//     // if (decodedEmail !== email)
+//     //   return res.status(401).send({ message: 'unauthorized access' })
      
-      const userEmail = req.user.email;
+//       const userEmail = req.query.email;
 
     
-      const reviews = await reviewsCollection.find({ reviewerEmail: userEmail }).toArray();
+//       const reviews = await reviewsCollection.find({ reviewerEmail: userEmail }).toArray();
 
-      res.json(reviews);
-  } catch (error) {
-      res.status(500).json({ message: error.message });
-  }
-});
+//       res.json(reviews);
+//   } catch (error) {
+//       res.status(500).json({ message: error.message });
+//   }
+// });
+
+app.get('/api/reviews/:email',verifyToken, async (req, res) => {
+  const email = req.params.email
+  const decodedEmail = req.user?.email
+  // console.log('email from token-->', decodedEmail)
+  // console.log('email from params-->', email)
+  if (decodedEmail !== email)
+    return res.status(401).send({ message: 'unauthorized access' })
+  const query = { 'reviewerEmail': email }
+  const result = await reviewsCollection.find(query).toArray()
+  res.send(result)
+  })
+
+
+
 
 // Get reviews for a specific service
 app.get('/api/reviews/service/:serviceId', async (req, res) => {
