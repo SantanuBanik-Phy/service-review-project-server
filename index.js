@@ -62,7 +62,7 @@ async function run() {
      const categoriesCollection = db.collection('categories');
     //Services routes
     
-  // Get all services for the authenticated user
+  //Get all services for the authenticated user
 //   app.get('/api/services', async (req, res) => {
 //     // const email = req.query.email
 //     // const decodedEmail = req.user?.email
@@ -93,7 +93,7 @@ async function run() {
 
 
 
-app.get('/services', async (req, res) => {
+app.get('/api/services', async (req, res) => {
   try {
    
     const limit = parseInt(req.query.limit) || 0;
@@ -103,6 +103,7 @@ app.get('/services', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -131,7 +132,7 @@ app.post("/logout", async (req, res) => {
 
 
     // Get a single service by ID
-    app.get('/api/services/:id', async (req, res) => {
+    app.get('/services/:id', async (req, res) => {
       try {
         const service = await servicesCollection.findOne({ _id: new ObjectId(req.params.id) });
         if (service == null) {
